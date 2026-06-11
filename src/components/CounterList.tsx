@@ -1,14 +1,9 @@
 'use client';
+import { useState, useCallback } from 'react';
 import type { CounterResult, Tier } from '@/types';
 
 function confidenceStars(count: number) {
   return '★'.repeat(count) + '☆'.repeat(3 - count);
-}
-
-function difficultyStyle(d: string | null) {
-  if (d === '易しい') return { background: 'rgba(16,185,129,0.15)', color: 'var(--green)' };
-  if (d === '難しい') return { background: 'rgba(239,68,68,0.15)', color: 'var(--red)' };
-  return { background: 'rgba(245,158,11,0.15)', color: '#F59E0B' };
 }
 
 const TIER_COLOR: Record<Tier, { bg: string; color: string }> = {
@@ -36,6 +31,33 @@ function formatSample(n: number): string {
 
 export default function CounterList({ result, patch }: { result: CounterResult; patch: string }) {
   const BASE = `https://ddragon.leagueoflegends.com/cdn/${patch}/img/champion`;
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [explanations, setExplanations] = useState<Record<string, string>>({});
+  const [loadingId, setLoadingId] = useState<string | null>(null);
+
+  const handleRowClick = useCallback(async (championId: string) => {
+    if (expandedId === championId) {
+      setExpandedId(null);
+      return;
+    }
+    setExpandedId(championId);
+    if (explanations[championId]) return;
+
+    setLoadingId(championId);
+    try {
+      const res = await fetch(
+        `/api/explain?target=${result.targetChampionId}&counter=${championId}&role=${result.role}`
+      );
+      const data = await res.json();
+      if (data.explanation) {
+        setExplanations((prev) => ({ ...prev, [championId]: data.explanation }));
+      }
+    } catch {
+      setExplanations((prev) => ({ ...prev, [championId]: '解説を取得できませんでした。' }));
+    } finally {
+      setLoadingId(null);
+    }
+  }, [expandedId, explanations, result.targetChampionId, result.role]);
 
   return (
     <div className="rounded-lg p-6" style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderTop: '2px solid var(--purple)' }}>
@@ -52,9 +74,7 @@ export default function CounterList({ result, patch }: { result: CounterResult; 
       <div className="flex items-center justify-between mb-5">
         <div className="flex items-center gap-2">
           <span className="w-2 h-2 rounded-full inline-block" style={{ background: 'var(--green)' }} />
-          <span className="text-xs" style={{ color: '#9CA3AF' }}>
-            エメラルド以下
-          </span>
+          <span className="text-xs" style={{ color: '#9CA3AF' }}>エメラルド以下</span>
         </div>
         <a
           href={patchNotesUrl(result.patch)}
@@ -68,74 +88,99 @@ export default function CounterList({ result, patch }: { result: CounterResult; 
       </div>
 
       <div className="flex flex-col gap-2">
-        {result.counters.map((c, i) => (
-          <div
-            key={c.championId}
-            className="counter-row rounded-md px-3 py-2"
-            style={{ background: 'var(--bg-input)', border: '1px solid var(--border)' }}
-          >
-            {/* 上段: 順位・アイコン・名前・ティア・勝率 */}
-            <div className="flex items-center gap-2">
-              <span className="text-sm font-bold w-5 text-center shrink-0" style={{ color: i < 3 ? 'var(--gold)' : '#9CA3AF' }}>
-                {i + 1}
-              </span>
+        {result.counters.map((c, i) => {
+          const isExpanded = expandedId === c.championId;
+          const isLoading = loadingId === c.championId;
+          const explanation = explanations[c.championId];
 
-              <div
-                className="rounded-full border-2 overflow-hidden shrink-0"
-                style={{ width: 36, height: 36, borderColor: 'var(--border)', background: 'linear-gradient(135deg,#1f2d45,#2d3a50)' }}
+          return (
+            <div key={c.championId}>
+              <button
+                onClick={() => handleRowClick(c.championId)}
+                className="counter-row w-full rounded-md px-3 py-2 text-left"
+                style={{
+                  background: isExpanded ? 'rgba(79,70,229,0.08)' : 'var(--bg-input)',
+                  border: `1px solid ${isExpanded ? 'rgba(79,70,229,0.4)' : 'var(--border)'}`,
+                }}
               >
-                <img
-                  src={`${BASE}/${c.championId}.png`}
-                  alt={c.nameJa}
-                  width={44}
-                  height={44}
-                  style={{ margin: -4, width: 44, height: 44, objectFit: 'cover' }}
-                />
-              </div>
+                {/* 上段: 順位・アイコン・名前・ティア・勝率・信頼度 */}
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-bold w-5 text-center shrink-0" style={{ color: i < 3 ? 'var(--gold)' : '#9CA3AF' }}>
+                    {i + 1}
+                  </span>
 
-              <span className="text-sm font-semibold flex-1 truncate">{c.nameJa}</span>
+                  <div
+                    className="rounded-full border-2 overflow-hidden shrink-0"
+                    style={{ width: 36, height: 36, borderColor: 'var(--border)', background: 'linear-gradient(135deg,#1f2d45,#2d3a50)' }}
+                  >
+                    <img
+                      src={`${BASE}/${c.championId}.png`}
+                      alt={c.nameJa}
+                      width={44}
+                      height={44}
+                      style={{ margin: -4, width: 44, height: 44, objectFit: 'cover' }}
+                    />
+                  </div>
 
-              {/* ティア */}
-              {c.tier && (
-                <span
-                  className="text-xs font-bold px-1.5 py-0.5 rounded shrink-0"
-                  style={{ ...TIER_COLOR[c.tier], fontSize: '0.7rem' }}
+                  <span className="text-sm font-semibold flex-1 truncate">{c.nameJa}</span>
+
+                  {c.tier && (
+                    <span
+                      className="text-xs font-bold px-1.5 py-0.5 rounded shrink-0"
+                      style={{ ...TIER_COLOR[c.tier], fontSize: '0.7rem' }}
+                    >
+                      {c.tier}
+                    </span>
+                  )}
+
+                  <span className="text-sm font-bold tabular-nums shrink-0" style={{ color: 'var(--green)' }}>
+                    {c.winRate.toFixed(1)}%
+                  </span>
+
+                  <span className="text-xs shrink-0" style={{ color: 'var(--gold)', minWidth: 44, textAlign: 'right' }}>
+                    {confidenceStars(c.sourceCount)}
+                  </span>
+
+                  <span className="text-xs shrink-0" style={{ color: isExpanded ? 'var(--purple-light)' : '#4B5563' }}>
+                    {isExpanded ? '▲' : '▼'}
+                  </span>
+                </div>
+
+                {/* 下段: サンプル数 */}
+                {c.sampleCount && c.sampleCount > 0 && (
+                  <div className="ml-[52px] mt-0.5">
+                    <span className="text-xs" style={{ color: '#6B7280' }}>
+                      {formatSample(c.sampleCount)}試合
+                    </span>
+                  </div>
+                )}
+              </button>
+
+              {/* 展開: 解説 */}
+              {isExpanded && (
+                <div
+                  className="px-4 py-3 rounded-b-md"
+                  style={{ background: 'rgba(79,70,229,0.05)', border: '1px solid rgba(79,70,229,0.25)', borderTop: 'none', marginTop: -1 }}
                 >
-                  {c.tier}
-                </span>
+                  {isLoading ? (
+                    <div className="flex items-center gap-2">
+                      <span className="spinner" style={{ borderColor: 'rgba(79,70,229,0.3)', borderTopColor: 'var(--purple-light)' }} />
+                      <span className="text-xs" style={{ color: '#9CA3AF' }}>解説を生成中...</span>
+                    </div>
+                  ) : (
+                    <p className="text-sm leading-relaxed" style={{ color: '#D1D5DB' }}>
+                      {explanation}
+                    </p>
+                  )}
+                </div>
               )}
-
-              {/* 勝率 */}
-              <span className="text-sm font-bold tabular-nums shrink-0" style={{ color: 'var(--green)' }}>
-                {c.winRate.toFixed(1)}%
-              </span>
             </div>
-
-            {/* 下段: 難易度・サンプル数・信頼度 */}
-            <div className="flex items-center gap-2 mt-1 ml-[52px]">
-              {c.difficulty && (
-                <span
-                  className="text-xs font-bold px-1.5 py-0.5 rounded"
-                  style={difficultyStyle(c.difficulty)}
-                >
-                  {c.difficulty}
-                </span>
-              )}
-              {c.sampleCount && c.sampleCount > 0 && (
-                <span className="text-xs" style={{ color: '#6B7280' }}>
-                  {formatSample(c.sampleCount)}試合
-                </span>
-              )}
-              <span className="text-xs ml-auto" style={{ color: 'var(--gold)' }}>
-                {confidenceStars(c.sourceCount)}
-              </span>
-            </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
 
       <div className="mt-4 text-xs" style={{ color: '#6B7280' }}>
-        ★の数はデータ取得サイト数（最大2）。多いほど信頼性が高いです。
+        ★の数はデータ取得サイト数（最大2）。行をクリックすると解説を表示します。
       </div>
     </div>
   );

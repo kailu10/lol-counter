@@ -7,15 +7,12 @@ export interface Champion {
   roles: Role[];
 }
 
-export type Difficulty = '易しい' | '普通' | '難しい';
-
 export type Tier = 'S+' | 'S' | 'S-' | 'A+' | 'A' | 'A-' | 'B+' | 'B' | 'B-' | 'C' | 'D';
 
 export interface CounterEntry {
   championId: string;
   nameJa: string;
   winRate: number;
-  difficulty: Difficulty | null;
   sourceCount: number;
   sampleCount?: number;
   tier?: Tier;

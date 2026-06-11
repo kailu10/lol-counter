@@ -1,4 +1,4 @@
-import type { Role, Difficulty } from '@/types';
+import type { Role } from '@/types';
 
 const ROLE_PARAM: Record<Role, string> = {
   TOP: 'top',
@@ -8,17 +8,9 @@ const ROLE_PARAM: Record<Role, string> = {
   SUP: 'support',
 };
 
-const DIFFICULTY_COLOR: Record<string, Difficulty> = {
-  'teal': '易しい',
-  'yellow': '普通',
-  'purple': '難しい',
-  'orange': '普通',
-};
-
 export interface OpggCounterEntry {
   championId: string;
   winRate: number;
-  difficulty: Difficulty | null;
 }
 
 export async function scrapeOpgg(
@@ -39,9 +31,6 @@ export async function scrapeOpgg(
 
   const html = await res.text();
   const results: OpggCounterEntry[] = [];
-
-  // op.gg の counter list 構造:
-  // alt="ChampionName" → span>ChampionName → strong.text-main-XXX>XX.XX<!-- -->%
   const pattern = /alt="([A-Za-z']+)"[^>]*\/?><span[^>]*>[^<]+<\/span><\/div>.*?text-main-\d+[^>]*>([\d.]+)<!-- -->%/gs;
 
   const seen = new Set<string>();
@@ -50,18 +39,10 @@ export async function scrapeOpgg(
     const winRate = parseFloat(m[2]);
 
     if (champId === championId || isNaN(winRate) || seen.has(champId)) continue;
-    if (winRate < 45 || winRate > 75) continue; // 明らかに違うデータを除外
+    if (winRate < 45 || winRate > 75) continue;
 
     seen.add(champId);
-
-    // 難易度: チャンピオンアイコンのborder色から推定
-    const diffMatch = html.slice(
-      Math.max(0, html.indexOf(`alt="${champId}"`) - 200),
-      html.indexOf(`alt="${champId}"`)
-    ).match(/border-(teal|yellow|purple|orange)-500/);
-    const difficulty: Difficulty | null = diffMatch ? (DIFFICULTY_COLOR[diffMatch[1]] ?? null) : null;
-
-    results.push({ championId: champId, winRate, difficulty });
+    results.push({ championId: champId, winRate });
   }
 
   return results.slice(0, 10);
