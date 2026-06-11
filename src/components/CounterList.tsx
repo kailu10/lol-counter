@@ -22,10 +22,8 @@ const TIER_COLOR: Record<Tier, { bg: string; color: string }> = {
   'D':  { bg: 'rgba(107,114,128,0.12)', color: '#6B7280' },
 };
 
-function patchNotesUrl(patch: string): string {
-  const parts = patch.split('.');
-  if (parts.length < 2) return 'https://www.leagueoflegends.com/en-us/news/game-updates/';
-  return `https://www.leagueoflegends.com/en-us/news/game-updates/patch-${parts[0]}-${parts[1]}-notes/`;
+function patchNotesUrl(_patch: string): string {
+  return 'https://www.leagueoflegends.com/ja-jp/news/tags/patch-notes/';
 }
 
 function formatSample(n: number): string {
