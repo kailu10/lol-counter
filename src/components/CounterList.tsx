@@ -24,8 +24,8 @@ const TIER_COLOR: Record<Tier, { bg: string; color: string }> = {
 
 function patchNotesUrl(patch: string): string {
   const parts = patch.split('.');
-  if (parts.length < 2) return 'https://www.leagueoflegends.com/ja-jp/news/game-updates/';
-  return `https://www.leagueoflegends.com/ja-jp/news/game-updates/patch-${parts[0]}-${parts[1]}-notes/`;
+  if (parts.length < 2) return 'https://www.leagueoflegends.com/en-us/news/game-updates/';
+  return `https://www.leagueoflegends.com/en-us/news/game-updates/patch-${parts[0]}-${parts[1]}-notes/`;
 }
 
 function formatSample(n: number): string {
