@@ -49,11 +49,10 @@ export default function CounterList({ result, patch }: { result: CounterResult; 
         `/api/explain?target=${result.targetChampionId}&counter=${championId}&role=${result.role}`
       );
       const data = await res.json();
-      if (data.explanation) {
-        setExplanations((prev) => ({ ...prev, [championId]: data.explanation }));
-      }
+      const text = data.explanation ?? data.error ?? '解説を取得できませんでした。';
+      setExplanations((prev) => ({ ...prev, [championId]: text }));
     } catch {
-      setExplanations((prev) => ({ ...prev, [championId]: '解説を取得できませんでした。' }));
+      setExplanations((prev) => ({ ...prev, [championId]: '解説を取得できませんでした。時間をおいて再試行してください。' }));
     } finally {
       setLoadingId(null);
     }

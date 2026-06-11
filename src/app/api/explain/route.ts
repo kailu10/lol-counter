@@ -34,8 +34,12 @@ export async function GET(req: NextRequest) {
     cache.set(key, explanation);
 
     return NextResponse.json({ explanation });
-  } catch (err) {
+  } catch (err: unknown) {
+    const apiErr = err as { status?: number; error?: { type?: string } };
+    if (apiErr.status === 400 && apiErr.error?.type === 'invalid_request_error') {
+      return NextResponse.json({ error: 'APIクレジット不足です。Anthropic コンソールで残高を確認してください。' }, { status: 503 });
+    }
     console.error('explain API error:', err);
-    return NextResponse.json({ error: '生成に失敗しました' }, { status: 500 });
+    return NextResponse.json({ error: '解説の生成に失敗しました。しばらくしてから再試行してください。' }, { status: 500 });
   }
 }
