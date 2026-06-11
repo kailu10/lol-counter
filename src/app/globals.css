@@ -1,0 +1,21 @@
+@import "tailwindcss";
+
+:root {
+  --bg-primary: #0A0E1A;
+  --bg-card: #111827;
+  --bg-input: #1a2234;
+  --gold: #C89B3C;
+  --gold-light: #F0C060;
+  --purple: #4F46E5;
+  --purple-light: #7C3AED;
+  --green: #10B981;
+  --red: #EF4444;
+  --border: #1F2D45;
+}
+
+body {
+  background-color: var(--bg-primary);
+  color: #E5E7EB;
+  font-family: 'Segoe UI', 'Hiragino Sans', 'Meiryo', sans-serif;
+  min-height: 100vh;
+}
