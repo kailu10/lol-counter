@@ -2,22 +2,10 @@ import { notFound } from 'next/navigation';
 import Header from '@/components/Header';
 import ChampionSearch from '@/components/ChampionSearch';
 import CounterList from '@/components/CounterList';
-import type { Role, CounterResult } from '@/types';
+import { getCounterData } from '@/lib/counter';
+import type { Role } from '@/types';
 
 const VALID_ROLES: Role[] = ['TOP', 'JG', 'MID', 'ADC', 'SUP'];
-
-async function fetchCounter(champion: string, role: Role): Promise<CounterResult | null> {
-  try {
-    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL ?? 'http://localhost:3000';
-    const res = await fetch(`${baseUrl}/api/counter?champion=${champion}&role=${role}`, {
-      next: { revalidate: 3600 },
-    });
-    if (!res.ok) return null;
-    return res.json();
-  } catch {
-    return null;
-  }
-}
 
 export default async function CounterPage({
   params,
@@ -29,7 +17,7 @@ export default async function CounterPage({
 
   if (!VALID_ROLES.includes(upperRole)) notFound();
 
-  const result = await fetchCounter(champion, upperRole);
+  const result = await getCounterData(champion, upperRole);
 
   return (
     <div className="flex flex-col min-h-screen">
