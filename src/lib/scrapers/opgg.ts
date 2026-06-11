@@ -1,5 +1,4 @@
-import * as cheerio from 'cheerio';
-import type { Role } from '@/types';
+import type { Role, Difficulty } from '@/types';
 
 const ROLE_PARAM: Record<Role, string> = {
   TOP: 'top',
@@ -9,17 +8,17 @@ const ROLE_PARAM: Record<Role, string> = {
   SUP: 'support',
 };
 
-const DIFFICULTY_MAP: Record<string, import('@/types').Difficulty> = {
-  Easy: '易しい',
-  Normal: '普通',
-  Hard: '難しい',
-  Medium: '普通',
+const DIFFICULTY_COLOR: Record<string, Difficulty> = {
+  'teal': '易しい',
+  'yellow': '普通',
+  'purple': '難しい',
+  'orange': '普通',
 };
 
 export interface OpggCounterEntry {
   championId: string;
   winRate: number;
-  difficulty: import('@/types').Difficulty | null;
+  difficulty: Difficulty | null;
 }
 
 export async function scrapeOpgg(
@@ -39,37 +38,31 @@ export async function scrapeOpgg(
   if (!res.ok) return [];
 
   const html = await res.text();
-  const $ = cheerio.load(html);
   const results: OpggCounterEntry[] = [];
 
-  // op.ggのカウンターテーブルをパース
-  $('table tbody tr, [class*="counter"] [class*="champion-item"], [class*="CounterItem"]').each((_, el) => {
-    const row = $(el);
+  // op.gg の counter list 構造:
+  // alt="ChampionName" → span>ChampionName → strong.text-main-XXX>XX.XX<!-- -->%
+  const pattern = /alt="([A-Za-z']+)"[^>]*\/?><span[^>]*>[^<]+<\/span><\/div>.*?text-main-\d+[^>]*>([\d.]+)<!-- -->%/gs;
 
-    // チャンピオン名からIDを取得（imgのsrcまたはhrefから）
-    const imgSrc = row.find('img').first().attr('src') ?? '';
-    const href = row.find('a').first().attr('href') ?? '';
+  const seen = new Set<string>();
+  for (const m of html.matchAll(pattern)) {
+    const champId = m[1].trim();
+    const winRate = parseFloat(m[2]);
 
-    const idFromImg = imgSrc.match(/\/champions\/([^/]+)\//)?.[1] ??
-                      imgSrc.match(/champion\/([^.]+)\.png/)?.[1];
-    const idFromHref = href.match(/\/champions\/([^/]+)/)?.[1];
-    const championId = idFromImg ?? idFromHref;
-    if (!championId) return;
+    if (champId === championId || isNaN(winRate) || seen.has(champId)) continue;
+    if (winRate < 45 || winRate > 75) continue; // 明らかに違うデータを除外
 
-    // 勝率テキストを取得
-    const winRateText = row.find('[class*="win-rate"], [class*="winrate"], td').filter((_, td) => {
-      const text = $(td).text();
-      return /\d+\.\d+%/.test(text);
-    }).first().text();
-    const winRate = parseFloat(winRateText.replace('%', ''));
-    if (isNaN(winRate)) return;
+    seen.add(champId);
 
-    // 難易度
-    const diffText = row.find('[class*="difficulty"], [class*="Difficulty"]').first().text().trim();
-    const difficulty = DIFFICULTY_MAP[diffText] ?? null;
+    // 難易度: チャンピオンアイコンのborder色から推定
+    const diffMatch = html.slice(
+      Math.max(0, html.indexOf(`alt="${champId}"`) - 200),
+      html.indexOf(`alt="${champId}"`)
+    ).match(/border-(teal|yellow|purple|orange)-500/);
+    const difficulty: Difficulty | null = diffMatch ? (DIFFICULTY_COLOR[diffMatch[1]] ?? null) : null;
 
-    results.push({ championId, winRate, difficulty });
-  });
+    results.push({ championId: champId, winRate, difficulty });
+  }
 
   return results.slice(0, 10);
 }
