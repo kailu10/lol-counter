@@ -1,11 +1,12 @@
-import { scrapeOpgg } from './scrapers/opgg';
 import { scrapeLolalytics } from './scrapers/lolalytics';
-import { scrapeLolps } from './scrapers/lolps';
 import { scrapeTierList } from './scrapers/tierlist';
-import { aggregateCounters } from './aggregator';
 import { cacheKey, getCached, setCached } from './cache';
 import { getAllChampions, getLatestPatch } from './ddragon';
-import type { Role, CounterResult } from '@/types';
+import type { Role, CounterResult, CounterEntry, Tier, Champion } from '@/types';
+
+function normalizeId(id: string): string {
+  return id.toLowerCase().replace(/[^a-z0-9]/g, '');
+}
 
 export async function getCounterData(
   championId: string,
@@ -22,32 +23,45 @@ export async function getCounterData(
   );
   if (!champion) return null;
 
-  const jaNameMap = new Map(champions.map((c) => [c.id, c.nameJa]));
+  // 正規化IDから ddragon チャンピオンを引くための索引
+  const champByNorm = new Map<string, Champion>();
+  for (const c of champions) champByNorm.set(normalizeId(c.id), c);
 
-  const [opggData, lolalyticsData, lolpsData, tierData] = await Promise.allSettled([
-    scrapeOpgg(championId, role),
+  // データソースは lolalytics に一本化（カウンター勝率・試合数・ティア）
+  const [lolalyticsData, tierData] = await Promise.allSettled([
     scrapeLolalytics(championId, role),
-    scrapeLolps(championId, role),
     scrapeTierList(role),
   ]);
 
-  const opgg = opggData.status === 'fulfilled' ? opggData.value : [];
   const lolalytics = lolalyticsData.status === 'fulfilled' ? lolalyticsData.value : [];
-  const lolps = lolpsData.status === 'fulfilled' ? lolpsData.value : [];
   const tierMap = tierData.status === 'fulfilled' ? tierData.value : new Map();
 
-  if (opgg.length === 0 && lolalytics.length === 0 && lolps.length === 0) {
-    return null;
+  if (lolalytics.length === 0) return null;
+
+  const counters: CounterEntry[] = [];
+  for (const e of lolalytics) {
+    const norm = normalizeId(e.championId);
+    const champ = champByNorm.get(norm);
+    if (!champ) continue; // ddragon に存在しないキャラはスキップ
+
+    const tier = tierMap.get(norm)?.tier as Tier | undefined;
+    counters.push({
+      championId: champ.id, // 正準な ddragon ID に統一（アイコン・ティア照合の一貫性）
+      nameJa: champ.nameJa,
+      winRate: e.winRate,
+      sampleCount: e.sampleCount && e.sampleCount > 0 ? e.sampleCount : undefined,
+      tier,
+    });
   }
 
-  const counters = aggregateCounters(opgg, lolalytics, lolps, jaNameMap, tierMap);
+  counters.sort((a, b) => b.winRate - a.winRate);
 
   const result: CounterResult = {
     targetChampionId: champion.id,
     targetNameJa: champion.nameJa,
     role,
     patch,
-    counters,
+    counters: counters.slice(0, 10),
     fetchedAt: Date.now(),
   };
 

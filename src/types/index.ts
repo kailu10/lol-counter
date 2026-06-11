@@ -13,7 +13,6 @@ export interface CounterEntry {
   championId: string;
   nameJa: string;
   winRate: number;
-  sourceCount: number;
   sampleCount?: number;
   tier?: Tier;
 }

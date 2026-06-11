@@ -2,10 +2,6 @@
 import { useState, useCallback } from 'react';
 import type { CounterResult, Tier } from '@/types';
 
-function confidenceStars(count: number) {
-  return '★'.repeat(count) + '☆'.repeat(3 - count);
-}
-
 const TIER_COLOR: Record<Tier, { bg: string; color: string }> = {
   'S+': { bg: 'rgba(255,215,0,0.2)',    color: '#FFD700' },
   'S':  { bg: 'rgba(255,165,0,0.2)',    color: '#FFA500' },
@@ -66,7 +62,7 @@ export default function CounterList({ result, patch }: { result: CounterResult; 
           <span className="text-sm font-normal ml-1" style={{ color: '#9CA3AF' }}>（{result.role}）のカウンター</span>
         </h2>
         <span className="text-xs px-2 py-1 rounded" style={{ color: '#9CA3AF', background: 'var(--bg-input)', border: '1px solid var(--border)' }}>
-          複数サイト集計
+          lolalytics
         </span>
       </div>
 
@@ -136,10 +132,6 @@ export default function CounterList({ result, patch }: { result: CounterResult; 
                     {c.winRate.toFixed(1)}%
                   </span>
 
-                  <span className="text-xs shrink-0" style={{ color: 'var(--gold)', minWidth: 44, textAlign: 'right' }}>
-                    {confidenceStars(c.sourceCount)}
-                  </span>
-
                   <span className="text-xs shrink-0" style={{ color: isExpanded ? 'var(--purple-light)' : '#4B5563' }}>
                     {isExpanded ? '▲' : '▼'}
                   </span>
@@ -179,7 +171,7 @@ export default function CounterList({ result, patch }: { result: CounterResult; 
       </div>
 
       <div className="mt-4 text-xs" style={{ color: '#6B7280' }}>
-        ★の数はデータ取得サイト数（最大2）。行をクリックすると解説を表示します。
+        データ出典: lolalytics（エメラルド以上）。行をクリックすると解説を表示します。
       </div>
     </div>
   );
