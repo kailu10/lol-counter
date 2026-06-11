@@ -11,6 +11,7 @@ const ROLE_PARAM: Record<Role, string> = {
 export interface LolalyticsCounterEntry {
   championId: string;
   winRate: number;
+  sampleCount?: number;
 }
 
 export async function scrapeLolalytics(
@@ -32,21 +33,21 @@ export async function scrapeLolalytics(
   const results: LolalyticsCounterEntry[] = [];
   const seen = new Set<string>();
 
-  // パターン: "wins against <!--t=XX-->ChampionName<!----> <span class="text-green-XXX">XX.XX%</span> of the time"
+  // パターン: "wins against <!--t=XX-->ChampionName<!----> NNN Games ... XX.XX% of the time"
   // lolalytics は target の win rate を表示。counter win rate = 100 - target win rate
-  const pattern = /wins against <!--t=\w+-->([\w\s'.]+?)<!---->.*?<span class="text-green-\d+">([\d.]+)%<\/span> of the time/gs;
+  const pattern = /wins against <!--t=\w+-->([\w\s'.]+?)<!---->.*?(\d+)\s*Games.*?<span class="text-green-\d+">([\d.]+)%<\/span> of the time/gs;
 
   for (const m of html.matchAll(pattern)) {
     const champName = m[1].trim().replace(/\s+/g, ' ');
-    const targetWinRate = parseFloat(m[2]);
+    const sampleCount = parseInt(m[2], 10);
+    const targetWinRate = parseFloat(m[3]);
     const counterWinRate = Math.round((100 - targetWinRate) * 10) / 10;
 
     if (isNaN(counterWinRate) || seen.has(champName)) continue;
     seen.add(champName);
 
-    // lolalytics の表示名（英語）をそのまま championId として使う
     const championIdGuess = champName.replace(/['\s.]/g, '');
-    results.push({ championId: championIdGuess, winRate: counterWinRate });
+    results.push({ championId: championIdGuess, winRate: counterWinRate, sampleCount });
   }
 
   return results.slice(0, 10);

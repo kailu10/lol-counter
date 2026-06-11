@@ -1,4 +1,4 @@
-import type { CounterEntry, Difficulty } from '@/types';
+import type { CounterEntry, Difficulty, Tier } from '@/types';
 import type { OpggCounterEntry } from './scrapers/opgg';
 import type { LolalyticsCounterEntry } from './scrapers/lolalytics';
 import type { LolpsCounterEntry } from './scrapers/lolps';
@@ -11,28 +11,36 @@ export function aggregateCounters(
   opggResults: OpggCounterEntry[],
   lolalyticsResults: LolalyticsCounterEntry[],
   lolpsResults: LolpsCounterEntry[],
-  jaNameMap: Map<string, string>
+  jaNameMap: Map<string, string>,
+  tierMap: Map<string, Tier> = new Map()
 ): CounterEntry[] {
   const map = new Map<string, {
     winRateSum: number;
     count: number;
     difficulty: Difficulty | null;
+    sampleCount: number;
   }>();
 
-  const addEntry = (id: string, winRate: number, difficulty: Difficulty | null = null) => {
+  const addEntry = (
+    id: string,
+    winRate: number,
+    difficulty: Difficulty | null = null,
+    sampleCount = 0
+  ) => {
     const key = normalizeId(id);
     const existing = map.get(key);
     if (existing) {
       existing.winRateSum += winRate;
       existing.count += 1;
       if (difficulty && !existing.difficulty) existing.difficulty = difficulty;
+      existing.sampleCount += sampleCount;
     } else {
-      map.set(key, { winRateSum: winRate, count: 1, difficulty });
+      map.set(key, { winRateSum: winRate, count: 1, difficulty, sampleCount });
     }
   };
 
   opggResults.forEach((e) => addEntry(e.championId, e.winRate, e.difficulty));
-  lolalyticsResults.forEach((e) => addEntry(e.championId, e.winRate));
+  lolalyticsResults.forEach((e) => addEntry(e.championId, e.winRate, null, e.sampleCount ?? 0));
   lolpsResults.forEach((e) => addEntry(e.championId, e.winRate));
 
   const entries: CounterEntry[] = [];
@@ -48,16 +56,19 @@ export function aggregateCounters(
     const nameJa = findJaName(originalId, jaNameMap);
     if (!nameJa) continue;
 
+    const tier = tierMap.get(normalizedId);
+
     entries.push({
       championId: originalId,
       nameJa,
       winRate: Math.round((data.winRateSum / data.count) * 10) / 10,
       difficulty: data.difficulty,
       sourceCount: data.count,
+      sampleCount: data.sampleCount > 0 ? data.sampleCount : undefined,
+      tier,
     });
   }
 
-  // 複数サイト一致ボーナス込みでソート：sourceCount降順 → winRate降順
   entries.sort((a, b) => {
     if (b.sourceCount !== a.sourceCount) return b.sourceCount - a.sourceCount;
     return b.winRate - a.winRate;

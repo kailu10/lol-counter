@@ -9,12 +9,16 @@ export interface Champion {
 
 export type Difficulty = '易しい' | '普通' | '難しい';
 
+export type Tier = 'S+' | 'S' | 'A+' | 'A' | 'B+' | 'B' | 'C' | 'D';
+
 export interface CounterEntry {
   championId: string;
   nameJa: string;
   winRate: number;
   difficulty: Difficulty | null;
   sourceCount: number;
+  sampleCount?: number;
+  tier?: Tier;
 }
 
 export interface CounterResult {
