@@ -1,0 +1,579 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>LoL カウンターピック - デザインサンプル</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    :root {
+      --bg-primary: #0A0E1A;
+      --bg-card: #111827;
+      --bg-input: #1a2234;
+      --gold: #C89B3C;
+      --gold-light: #F0C060;
+      --purple: #4F46E5;
+      --purple-light: #7C3AED;
+      --green: #10B981;
+      --red: #EF4444;
+      --text-primary: #E5E7EB;
+      --text-secondary: #9CA3AF;
+      --border: #1F2D45;
+    }
+
+    body {
+      background-color: var(--bg-primary);
+      color: var(--text-primary);
+      font-family: 'Segoe UI', 'Hiragino Sans', 'Meiryo', sans-serif;
+      min-height: 100vh;
+    }
+
+    /* ヘッダー */
+    header {
+      border-bottom: 1px solid var(--border);
+      background: linear-gradient(180deg, #0d1220 0%, var(--bg-primary) 100%);
+      padding: 16px 24px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    header h1 {
+      font-size: 1.4rem;
+      font-weight: 700;
+      color: var(--gold);
+      letter-spacing: 0.05em;
+      text-shadow: 0 0 20px rgba(200, 155, 60, 0.4);
+    }
+
+    header .subtitle {
+      font-size: 0.75rem;
+      color: var(--text-secondary);
+      border-left: 1px solid var(--border);
+      padding-left: 12px;
+      margin-left: 4px;
+    }
+
+    /* メインコンテンツ */
+    main {
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 32px 16px;
+    }
+
+    /* 検索パネル */
+    .search-panel {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-top: 2px solid var(--gold);
+      border-radius: 8px;
+      padding: 24px;
+      margin-bottom: 24px;
+    }
+
+    .search-panel h2 {
+      font-size: 0.85rem;
+      color: var(--gold);
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      margin-bottom: 16px;
+    }
+
+    .search-input-row {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+
+    .search-input {
+      flex: 1;
+      background: var(--bg-input);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 10px 14px;
+      color: var(--text-primary);
+      font-size: 1rem;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    .search-input:focus {
+      border-color: var(--purple);
+    }
+
+    .search-input::placeholder { color: var(--text-secondary); }
+
+    .btn-search {
+      background: linear-gradient(135deg, var(--purple), var(--purple-light));
+      color: white;
+      border: none;
+      border-radius: 6px;
+      padding: 10px 20px;
+      font-size: 0.95rem;
+      cursor: pointer;
+      font-weight: 600;
+      transition: opacity 0.2s;
+    }
+
+    .btn-search:hover { opacity: 0.85; }
+
+    /* ロール選択 */
+    .role-label {
+      font-size: 0.8rem;
+      color: var(--text-secondary);
+      margin-bottom: 8px;
+    }
+
+    .role-buttons {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .role-btn {
+      background: var(--bg-input);
+      border: 1px solid var(--border);
+      color: var(--text-secondary);
+      border-radius: 6px;
+      padding: 7px 16px;
+      font-size: 0.85rem;
+      cursor: pointer;
+      font-weight: 600;
+      transition: all 0.2s;
+      letter-spacing: 0.05em;
+    }
+
+    .role-btn:hover {
+      border-color: var(--purple);
+      color: var(--text-primary);
+    }
+
+    .role-btn.active {
+      background: linear-gradient(135deg, var(--purple), var(--purple-light));
+      border-color: transparent;
+      color: white;
+    }
+
+    /* チャンピオン一覧トグル */
+    .champion-list-toggle {
+      margin-top: 16px;
+      padding-top: 16px;
+      border-top: 1px solid var(--border);
+    }
+
+    .toggle-btn {
+      background: none;
+      border: none;
+      color: var(--gold);
+      font-size: 0.85rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .champion-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(64px, 1fr));
+      gap: 8px;
+      margin-top: 12px;
+    }
+
+    .champion-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+      cursor: pointer;
+      padding: 6px;
+      border-radius: 6px;
+      border: 1px solid transparent;
+      transition: all 0.2s;
+    }
+
+    .champion-item:hover {
+      background: var(--bg-input);
+      border-color: var(--purple);
+    }
+
+    .champion-item.selected {
+      background: rgba(79, 70, 229, 0.15);
+      border-color: var(--purple);
+    }
+
+    .champion-icon {
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #1a2234, #2d3a50);
+      border: 2px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.3rem;
+      overflow: hidden;
+    }
+
+    .champion-icon img {
+      width: 52px;
+      height: 52px;
+      object-fit: cover;
+      margin: -4px;
+    }
+
+    .champion-name {
+      font-size: 0.65rem;
+      color: var(--text-secondary);
+      text-align: center;
+    }
+
+    /* 結果パネル */
+    .result-panel {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-top: 2px solid var(--purple);
+      border-radius: 8px;
+      padding: 24px;
+    }
+
+    .result-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 20px;
+    }
+
+    .result-header h2 {
+      font-size: 1.1rem;
+      font-weight: 700;
+    }
+
+    .result-header h2 span {
+      color: var(--gold);
+    }
+
+    .data-source-badge {
+      font-size: 0.7rem;
+      color: var(--text-secondary);
+      background: var(--bg-input);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 3px 8px;
+    }
+
+    /* カウンターリスト */
+    .counter-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .counter-card {
+      display: grid;
+      grid-template-columns: 28px 44px 1fr auto auto auto;
+      align-items: center;
+      gap: 12px;
+      background: var(--bg-input);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 10px 14px;
+      transition: border-color 0.2s;
+    }
+
+    .counter-card:hover { border-color: var(--purple); }
+
+    .counter-rank {
+      font-size: 0.85rem;
+      color: var(--text-secondary);
+      font-weight: 700;
+      text-align: center;
+    }
+
+    .counter-rank.top3 { color: var(--gold); }
+
+    .counter-icon {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #1f2d45, #2d3a50);
+      border: 2px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.2rem;
+      overflow: hidden;
+    }
+
+    .counter-icon img {
+      width: 48px;
+      height: 48px;
+      object-fit: cover;
+      margin: -4px;
+    }
+
+    .counter-name {
+      font-size: 0.95rem;
+      font-weight: 600;
+    }
+
+    .counter-winrate {
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: var(--green);
+      text-align: right;
+      min-width: 60px;
+    }
+
+    .counter-difficulty {
+      font-size: 0.75rem;
+      padding: 3px 8px;
+      border-radius: 4px;
+      font-weight: 600;
+      text-align: center;
+      min-width: 52px;
+    }
+
+    .diff-easy { background: rgba(16, 185, 129, 0.15); color: var(--green); }
+    .diff-medium { background: rgba(245, 158, 11, 0.15); color: #F59E0B; }
+    .diff-hard { background: rgba(239, 68, 68, 0.15); color: var(--red); }
+
+    .counter-confidence {
+      font-size: 0.8rem;
+      color: var(--gold);
+      min-width: 44px;
+      text-align: right;
+    }
+
+    /* ランク帯バッジ */
+    .rank-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 0.75rem;
+      color: var(--text-secondary);
+      background: var(--bg-input);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 3px 8px;
+      margin-bottom: 20px;
+    }
+
+    .rank-badge .dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--green);
+    }
+
+    /* レスポンシブ */
+    @media (max-width: 600px) {
+      .counter-card {
+        grid-template-columns: 24px 36px 1fr auto;
+        gap: 8px;
+      }
+      .counter-difficulty { display: none; }
+      .counter-confidence { display: none; }
+      .counter-icon { width: 36px; height: 36px; font-size: 1rem; }
+      header h1 { font-size: 1.1rem; }
+      header .subtitle { display: none; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div>⚔️</div>
+  <h1>LoL カウンターピック</h1>
+  <span class="subtitle">エメラルド以下対応</span>
+</header>
+
+<main>
+
+  <!-- 検索パネル -->
+  <div class="search-panel">
+    <h2>チャンピオン検索</h2>
+
+    <div class="search-input-row">
+      <input class="search-input" type="text" placeholder="チャンピオン名を入力（例：ダリウス）" value="ダリウス" />
+      <button class="btn-search">検索</button>
+    </div>
+
+    <div class="role-label">ロール</div>
+    <div class="role-buttons">
+      <button class="role-btn active">TOP</button>
+      <button class="role-btn">JG</button>
+      <button class="role-btn">MID</button>
+      <button class="role-btn">ADC</button>
+      <button class="role-btn">SUP</button>
+    </div>
+
+    <div class="champion-list-toggle">
+      <button class="toggle-btn">▼ 一覧から選ぶ</button>
+      <div class="champion-grid">
+        <div class="champion-item selected">
+          <div class="champion-icon"><img data-champion="Darius" alt="ダリウス" /></div>
+          <div class="champion-name">ダリウス</div>
+        </div>
+        <div class="champion-item">
+          <div class="champion-icon"><img data-champion="Jax" alt="ジャックス" /></div>
+          <div class="champion-name">ジャックス</div>
+        </div>
+        <div class="champion-item">
+          <div class="champion-icon"><img data-champion="Fiora" alt="フィオラ" /></div>
+          <div class="champion-name">フィオラ</div>
+        </div>
+        <div class="champion-item">
+          <div class="champion-icon"><img data-champion="Garen" alt="ガレン" /></div>
+          <div class="champion-name">ガレン</div>
+        </div>
+        <div class="champion-item">
+          <div class="champion-icon"><img data-champion="Mordekaiser" alt="モルデカイザー" /></div>
+          <div class="champion-name">モルデカイザー</div>
+        </div>
+        <div class="champion-item">
+          <div class="champion-icon"><img data-champion="Quinn" alt="クイン" /></div>
+          <div class="champion-name">クイン</div>
+        </div>
+        <div class="champion-item">
+          <div class="champion-icon"><img data-champion="Urgot" alt="アーゴット" /></div>
+          <div class="champion-name">アーゴット</div>
+        </div>
+        <div class="champion-item">
+          <div class="champion-icon"><img data-champion="Kennen" alt="ケネン" /></div>
+          <div class="champion-name">ケネン</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 結果パネル -->
+  <div class="result-panel">
+    <div class="result-header">
+      <h2><span>ダリウス</span>（TOP）のカウンター</h2>
+      <span class="data-source-badge">3サイト集計</span>
+    </div>
+
+    <div class="rank-badge">
+      <span class="dot"></span>
+      エメラルド以下のデータ
+    </div>
+
+    <div class="counter-list">
+
+      <div class="counter-card">
+        <div class="counter-rank top3">1</div>
+        <div class="counter-icon"><img data-champion="Quinn" alt="クイン" /></div>
+        <div class="counter-name">クイン</div>
+        <div class="counter-winrate">54.2%</div>
+        <div class="counter-difficulty diff-hard">難しい</div>
+        <div class="counter-confidence">★★★</div>
+      </div>
+
+      <div class="counter-card">
+        <div class="counter-rank top3">2</div>
+        <div class="counter-icon"><img data-champion="Urgot" alt="アーゴット" /></div>
+        <div class="counter-name">アーゴット</div>
+        <div class="counter-winrate">53.8%</div>
+        <div class="counter-difficulty diff-medium">普通</div>
+        <div class="counter-confidence">★★★</div>
+      </div>
+
+      <div class="counter-card">
+        <div class="counter-rank top3">3</div>
+        <div class="counter-icon"><img data-champion="Kennen" alt="ケネン" /></div>
+        <div class="counter-name">ケネン</div>
+        <div class="counter-winrate">53.1%</div>
+        <div class="counter-difficulty diff-medium">普通</div>
+        <div class="counter-confidence">★★☆</div>
+      </div>
+
+      <div class="counter-card">
+        <div class="counter-rank">4</div>
+        <div class="counter-icon"><img data-champion="Cassiopeia" alt="カシオペア" /></div>
+        <div class="counter-name">カシオペア</div>
+        <div class="counter-winrate">52.7%</div>
+        <div class="counter-difficulty diff-hard">難しい</div>
+        <div class="counter-confidence">★★☆</div>
+      </div>
+
+      <div class="counter-card">
+        <div class="counter-rank">5</div>
+        <div class="counter-icon"><img data-champion="Varus" alt="ヴァルス" /></div>
+        <div class="counter-name">ヴァルス</div>
+        <div class="counter-winrate">52.4%</div>
+        <div class="counter-difficulty diff-easy">易しい</div>
+        <div class="counter-confidence">★★☆</div>
+      </div>
+
+      <div class="counter-card">
+        <div class="counter-rank">6</div>
+        <div class="counter-icon"><img data-champion="Garen" alt="ガレン" /></div>
+        <div class="counter-name">ガレン</div>
+        <div class="counter-winrate">52.1%</div>
+        <div class="counter-difficulty diff-easy">易しい</div>
+        <div class="counter-confidence">★★★</div>
+      </div>
+
+      <div class="counter-card">
+        <div class="counter-rank">7</div>
+        <div class="counter-icon"><img data-champion="Nilah" alt="ニレー" /></div>
+        <div class="counter-name">ニレー</div>
+        <div class="counter-winrate">51.9%</div>
+        <div class="counter-difficulty diff-medium">普通</div>
+        <div class="counter-confidence">★☆☆</div>
+      </div>
+
+      <div class="counter-card">
+        <div class="counter-rank">8</div>
+        <div class="counter-icon"><img data-champion="Malphite" alt="マルファイト" /></div>
+        <div class="counter-name">マルファイト</div>
+        <div class="counter-winrate">51.6%</div>
+        <div class="counter-difficulty diff-easy">易しい</div>
+        <div class="counter-confidence">★★☆</div>
+      </div>
+
+      <div class="counter-card">
+        <div class="counter-rank">9</div>
+        <div class="counter-icon"><img data-champion="Irelia" alt="イレリア" /></div>
+        <div class="counter-name">イレリア</div>
+        <div class="counter-winrate">51.2%</div>
+        <div class="counter-difficulty diff-hard">難しい</div>
+        <div class="counter-confidence">★★☆</div>
+      </div>
+
+      <div class="counter-card">
+        <div class="counter-rank">10</div>
+        <div class="counter-icon"><img data-champion="Vayne" alt="ヴェイン" /></div>
+        <div class="counter-name">ヴェイン</div>
+        <div class="counter-winrate">50.9%</div>
+        <div class="counter-difficulty diff-hard">難しい</div>
+        <div class="counter-confidence">★★★</div>
+      </div>
+
+    </div>
+  </div>
+
+</main>
+
+<script>
+  const BASE = 'https://ddragon.leagueoflegends.com';
+
+  fetch(`${BASE}/api/versions.json`)
+    .then(r => r.json())
+    .then(versions => {
+      const v = versions[0];
+      document.querySelectorAll('img[data-champion]').forEach(img => {
+        const id = img.dataset.champion;
+        img.src = `${BASE}/cdn/${v}/img/champion/${id}.png`;
+      });
+    })
+    .catch(() => {
+      // フォールバック：画像読み込み失敗時は非表示
+      document.querySelectorAll('img[data-champion]').forEach(img => {
+        img.style.display = 'none';
+      });
+    });
+</script>
+</body>
+</html>
