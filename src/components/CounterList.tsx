@@ -70,7 +70,7 @@ export default function CounterList({ result, patch }: { result: CounterResult; 
         {result.counters.map((c, i) => (
           <div
             key={c.championId}
-            className="rounded-md px-3 py-2 transition-colors"
+            className="counter-row rounded-md px-3 py-2"
             style={{ background: 'var(--bg-input)', border: '1px solid var(--border)' }}
           >
             {/* 上段: 順位・アイコン・名前・ティア・勝率 */}

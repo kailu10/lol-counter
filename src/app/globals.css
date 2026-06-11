@@ -19,3 +19,103 @@ body {
   font-family: 'Segoe UI', 'Hiragino Sans', 'Meiryo', sans-serif;
   min-height: 100vh;
 }
+
+/* Input focus glow */
+input[type="text"]:focus {
+  outline: none;
+  border-color: var(--purple) !important;
+  box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.25), inset 0 0 0 1px rgba(79, 70, 229, 0.1);
+}
+
+/* Skeleton pulse */
+@keyframes skeleton-pulse {
+  0%, 100% { opacity: 0.35; }
+  50% { opacity: 0.65; }
+}
+
+.skeleton {
+  animation: skeleton-pulse 1.5s ease-in-out infinite;
+  background: var(--bg-input);
+  border-radius: 6px;
+}
+
+/* Spinner */
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+.spinner {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  border: 2px solid rgba(255,255,255,0.3);
+  border-top-color: white;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+
+/* Role tab hover */
+.role-tab {
+  transition: all 0.15s ease;
+}
+.role-tab:hover {
+  border-color: var(--purple) !important;
+  color: #E5E7EB !important;
+}
+.role-tab.active {
+  box-shadow: 0 0 12px rgba(79, 70, 229, 0.4);
+}
+
+/* Search button */
+.btn-search {
+  transition: all 0.2s ease;
+}
+.btn-search:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 16px rgba(79, 70, 229, 0.5);
+}
+.btn-search:active:not(:disabled) {
+  transform: translateY(0);
+}
+.btn-search:disabled {
+  cursor: not-allowed;
+}
+
+/* Champion grid item */
+.champ-item {
+  transition: all 0.15s ease;
+  position: relative;
+}
+.champ-item:hover {
+  transform: scale(1.06);
+  border-color: rgba(79, 70, 229, 0.6) !important;
+  background: rgba(79, 70, 229, 0.08) !important;
+  z-index: 1;
+}
+.champ-item.selected {
+  box-shadow: 0 0 0 2px var(--purple), 0 0 12px rgba(79, 70, 229, 0.3);
+}
+
+/* Favorite heart button */
+.btn-fav {
+  transition: all 0.15s ease;
+}
+.btn-fav:hover {
+  transform: scale(1.2);
+}
+
+/* Autocomplete item */
+.autocomplete-item {
+  transition: background 0.12s ease;
+}
+.autocomplete-item:hover {
+  background: rgba(79, 70, 229, 0.12) !important;
+}
+
+/* Counter row hover */
+.counter-row {
+  transition: all 0.15s ease;
+}
+.counter-row:hover {
+  border-color: rgba(79, 70, 229, 0.4) !important;
+  background: rgba(79, 70, 229, 0.05) !important;
+}

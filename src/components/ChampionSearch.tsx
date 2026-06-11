@@ -1,10 +1,15 @@
 'use client';
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import type { Champion, Role } from '@/types';
 
 const ROLES: Role[] = ['TOP', 'JG', 'MID', 'ADC', 'SUP'];
-const ROLE_LABELS: Record<Role, string> = { TOP: 'TOP', JG: 'JG', MID: 'MID', ADC: 'ADC', SUP: 'SUP' };
+const TIER_ORDER: Record<string, number> = { 'S+': 0, 'S': 1, 'A+': 2, 'A': 3, 'B+': 4, 'B': 5, 'C': 6, 'D': 7 };
+const FAV_KEY = 'lol-favorites';
+
+function normalizeId(id: string) {
+  return id.toLowerCase().replace(/[^a-z0-9]/g, '');
+}
 
 function ChampionIcon({ championId, patch, size = 44 }: { championId: string; patch: string; size?: number }) {
   const src = `https://ddragon.leagueoflegends.com/cdn/${patch}/img/champion/${championId}.png`;
@@ -20,13 +25,21 @@ function ChampionIcon({ championId, patch, size = 44 }: { championId: string; pa
 
 export default function ChampionSearch({ initialChampionId, initialRole }: { initialChampionId?: string; initialRole?: Role }) {
   const router = useRouter();
+  const inputRef = useRef<HTMLInputElement>(null);
+  const suggestRef = useRef<HTMLDivElement>(null);
+
   const [champions, setChampions] = useState<Champion[]>([]);
   const [patch, setPatch] = useState('15.1.1');
   const [query, setQuery] = useState('');
   const [role, setRole] = useState<Role>(initialRole ?? 'TOP');
   const [showList, setShowList] = useState(false);
+  const [showSuggestions, setShowSuggestions] = useState(false);
   const [selected, setSelected] = useState<Champion | null>(null);
+  const [isSearching, setIsSearching] = useState(false);
+  const [favorites, setFavorites] = useState<string[]>([]);
+  const [roleTiers, setRoleTiers] = useState<Record<string, string>>({});
 
+  // 初期データ取得
   useEffect(() => {
     fetch('/api/champions')
       .then((r) => r.json())
@@ -42,9 +55,56 @@ export default function ChampionSearch({ initialChampionId, initialRole }: { ini
       .then((v: string[]) => setPatch(v[0]));
   }, [initialChampionId]);
 
-  const filteredByRole = role
-    ? champions.filter((c) => c.roles.includes(role))
-    : champions;
+  // favoritesをlocalStorageから復元
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(FAV_KEY);
+      if (saved) setFavorites(JSON.parse(saved));
+    } catch {}
+  }, []);
+
+  // ロール変更時にティアデータ取得（使用率順ソート用）
+  useEffect(() => {
+    fetch(`/api/tierlist?role=${role}`)
+      .then((r) => r.json())
+      .then((data: Record<string, string>) => setRoleTiers(data))
+      .catch(() => {});
+  }, [role]);
+
+  // 外クリックでサジェスト閉じる
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (
+        suggestRef.current && !suggestRef.current.contains(e.target as Node) &&
+        inputRef.current && !inputRef.current.contains(e.target as Node)
+      ) {
+        setShowSuggestions(false);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
+
+  const toggleFavorite = useCallback((id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setFavorites((prev) => {
+      const next = prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id];
+      try { localStorage.setItem(FAV_KEY, JSON.stringify(next)); } catch {}
+      return next;
+    });
+  }, []);
+
+  const filteredByRole = role ? champions.filter((c) => c.roles.includes(role)) : champions;
+
+  // ティア順ソート（S+ → D → 未ランク）
+  const sortedChampions = [...filteredByRole].sort((a, b) => {
+    const ta = TIER_ORDER[roleTiers[normalizeId(a.id)] ?? ''] ?? 99;
+    const tb = TIER_ORDER[roleTiers[normalizeId(b.id)] ?? ''] ?? 99;
+    if (ta !== tb) return ta - tb;
+    return a.nameJa.localeCompare(b.nameJa, 'ja');
+  });
+
+  const favoriteChampions = sortedChampions.filter((c) => favorites.includes(c.id));
 
   const suggestions = query.length > 0
     ? filteredByRole.filter((c) =>
@@ -57,11 +117,13 @@ export default function ChampionSearch({ initialChampionId, initialRole }: { ini
   const handleSelect = useCallback((c: Champion) => {
     setSelected(c);
     setQuery(c.nameJa);
-    setShowList(false);
+    setShowSuggestions(false);
+    inputRef.current?.blur();
   }, []);
 
   const handleSearch = () => {
-    if (!selected) return;
+    if (!selected || isSearching) return;
+    setIsSearching(true);
     router.push(`/counter/${selected.id}/${role}`);
   };
 
@@ -74,60 +136,69 @@ export default function ChampionSearch({ initialChampionId, initialRole }: { ini
       {/* テキスト入力 */}
       <div className="relative mb-4">
         <div className="flex gap-2">
-          <input
-            type="text"
-            value={query}
-            onChange={(e) => { setQuery(e.target.value); setSelected(null); }}
-            onFocus={() => setShowList(false)}
-            placeholder="チャンピオン名を入力（日本語・英語）"
-            className="flex-1 rounded-md px-4 py-2.5 text-sm outline-none transition-colors"
-            style={{ background: 'var(--bg-input)', border: '1px solid var(--border)', color: '#E5E7EB' }}
-            onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-          />
+          <div className="relative flex-1">
+            <input
+              ref={inputRef}
+              type="text"
+              value={query}
+              onChange={(e) => { setQuery(e.target.value); setSelected(null); setShowSuggestions(true); }}
+              onFocus={() => { if (query.length > 0) setShowSuggestions(true); }}
+              placeholder="チャンピオン名を入力（日本語・英語）"
+              className="w-full rounded-md px-4 py-2.5 text-sm"
+              style={{ background: 'var(--bg-input)', border: '1px solid var(--border)', color: '#E5E7EB', transition: 'border-color 0.15s, box-shadow 0.15s' }}
+              onKeyDown={(e) => { if (e.key === 'Enter') handleSearch(); if (e.key === 'Escape') setShowSuggestions(false); }}
+            />
+            {/* サジェスト */}
+            {showSuggestions && suggestions.length > 0 && (
+              <div
+                ref={suggestRef}
+                className="absolute z-30 left-0 right-0 top-full mt-1 rounded-md overflow-hidden"
+                style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', boxShadow: '0 8px 32px rgba(0,0,0,0.5)' }}
+              >
+                {suggestions.map((c) => (
+                  <button
+                    key={c.id}
+                    onMouseDown={(e) => { e.preventDefault(); handleSelect(c); }}
+                    className="autocomplete-item w-full flex items-center gap-3 px-4 py-2 text-sm text-left"
+                    style={{ background: 'transparent', borderBottom: '1px solid var(--border)', color: '#E5E7EB' }}
+                  >
+                    <ChampionIcon championId={c.id} patch={patch} size={32} />
+                    <span className="font-medium">{c.nameJa}</span>
+                    {roleTiers[normalizeId(c.id)] && (
+                      <span className="text-xs font-bold" style={{ color: 'var(--gold)' }}>{roleTiers[normalizeId(c.id)]}</span>
+                    )}
+                    <span className="ml-auto text-xs" style={{ color: '#6B7280' }}>{c.nameEn}</span>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
           <button
             onClick={handleSearch}
-            disabled={!selected}
-            className="px-5 py-2.5 rounded-md text-sm font-bold text-white transition-opacity disabled:opacity-40"
-            style={{ background: 'linear-gradient(135deg, var(--purple), var(--purple-light))' }}
+            disabled={!selected || isSearching}
+            className="btn-search px-5 py-2.5 rounded-md text-sm font-bold text-white disabled:opacity-40"
+            style={{ background: 'linear-gradient(135deg, var(--purple), var(--purple-light))', minWidth: 72 }}
           >
-            検索
+            {isSearching ? <span className="spinner" /> : '検索'}
           </button>
         </div>
-
-        {/* オートコンプリート */}
-        {suggestions.length > 0 && (
-          <div className="absolute z-20 left-0 right-0 top-full mt-1 rounded-md shadow-lg overflow-hidden" style={{ background: 'var(--bg-card)', border: '1px solid var(--border)' }}>
-            {suggestions.map((c) => (
-              <button
-                key={c.id}
-                onClick={() => handleSelect(c)}
-                className="w-full flex items-center gap-3 px-4 py-2 text-sm text-left transition-colors hover:opacity-80"
-                style={{ background: 'transparent', borderBottom: '1px solid var(--border)' }}
-              >
-                <ChampionIcon championId={c.id} patch={patch} size={32} />
-                <span>{c.nameJa}</span>
-                <span className="ml-auto text-xs" style={{ color: '#9CA3AF' }}>{c.nameEn}</span>
-              </button>
-            ))}
-          </div>
-        )}
       </div>
 
       {/* ロール選択 */}
       <div className="mb-4">
-        <p className="text-xs mb-2" style={{ color: '#9CA3AF' }}>ロール</p>
+        <p className="text-xs mb-2" style={{ color: '#6B7280' }}>ロール</p>
         <div className="flex gap-2 flex-wrap">
           {ROLES.map((r) => (
             <button
               key={r}
               onClick={() => setRole(r)}
-              className="px-4 py-1.5 rounded-md text-sm font-bold tracking-wide transition-all"
+              className={`role-tab px-4 py-1.5 rounded-md text-sm font-bold tracking-wide ${role === r ? 'active' : ''}`}
               style={role === r
                 ? { background: 'linear-gradient(135deg, var(--purple), var(--purple-light))', color: 'white', border: '1px solid transparent' }
                 : { background: 'var(--bg-input)', color: '#9CA3AF', border: '1px solid var(--border)' }
               }
             >
-              {ROLE_LABELS[r]}
+              {r}
             </button>
           ))}
         </div>
@@ -137,34 +208,114 @@ export default function ChampionSearch({ initialChampionId, initialRole }: { ini
       <div className="pt-4" style={{ borderTop: '1px solid var(--border)' }}>
         <button
           onClick={() => setShowList((v) => !v)}
-          className="text-sm flex items-center gap-1.5 transition-opacity hover:opacity-75"
-          style={{ color: 'var(--gold)', background: 'none', border: 'none', cursor: 'pointer' }}
+          className="text-sm flex items-center gap-1.5 w-full"
+          style={{ color: 'var(--gold)', background: 'none', border: 'none', cursor: 'pointer', transition: 'opacity 0.15s' }}
+          onMouseEnter={(e) => (e.currentTarget.style.opacity = '0.75')}
+          onMouseLeave={(e) => (e.currentTarget.style.opacity = '1')}
         >
-          {showList ? '▲' : '▼'} 一覧から選ぶ
+          <span style={{ fontSize: '0.65rem' }}>{showList ? '▲' : '▼'}</span>
+          <span>一覧から選ぶ</span>
+          <span className="ml-auto text-xs" style={{ color: '#6B7280' }}>
+            ティア強さ順
+          </span>
         </button>
 
         {showList && (
-          <div className="mt-3 grid gap-2" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(68px, 1fr))' }}>
-            {filteredByRole.map((c) => (
-              <button
-                key={c.id}
-                onClick={() => handleSelect(c)}
-                className="flex flex-col items-center gap-1 p-1.5 rounded-md transition-all"
-                style={selected?.id === c.id
-                  ? { background: 'rgba(79,70,229,0.15)', border: '1px solid var(--purple)' }
-                  : { background: 'transparent', border: '1px solid transparent' }
-                }
-                title={c.nameJa}
-              >
-                <ChampionIcon championId={c.id} patch={patch} size={44} />
-                <span className="text-center leading-tight" style={{ fontSize: '0.6rem', color: '#9CA3AF', wordBreak: 'keep-all' }}>
-                  {c.nameJa}
-                </span>
-              </button>
-            ))}
+          <div className="mt-3">
+            {/* お気に入りセクション */}
+            {favoriteChampions.length > 0 && (
+              <div className="mb-4">
+                <p className="text-xs mb-2 font-bold" style={{ color: 'var(--gold)' }}>
+                  ★ お気に入り
+                </p>
+                <div className="grid gap-1.5" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(64px, 1fr))' }}>
+                  {favoriteChampions.map((c) => (
+                    <ChampionGridItem
+                      key={c.id}
+                      champion={c}
+                      patch={patch}
+                      isSelected={selected?.id === c.id}
+                      isFavorite={true}
+                      tier={roleTiers[normalizeId(c.id)]}
+                      onSelect={handleSelect}
+                      onToggleFavorite={toggleFavorite}
+                    />
+                  ))}
+                </div>
+                <div className="mt-3" style={{ borderTop: '1px solid var(--border)' }} />
+              </div>
+            )}
+
+            {/* 全チャンピオングリッド */}
+            <div className="grid gap-1.5" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(64px, 1fr))' }}>
+              {sortedChampions.map((c) => (
+                <ChampionGridItem
+                  key={c.id}
+                  champion={c}
+                  patch={patch}
+                  isSelected={selected?.id === c.id}
+                  isFavorite={favorites.includes(c.id)}
+                  tier={roleTiers[normalizeId(c.id)]}
+                  onSelect={handleSelect}
+                  onToggleFavorite={toggleFavorite}
+                />
+              ))}
+            </div>
           </div>
         )}
       </div>
     </div>
+  );
+}
+
+function ChampionGridItem({
+  champion, patch, isSelected, isFavorite, tier, onSelect, onToggleFavorite,
+}: {
+  champion: Champion;
+  patch: string;
+  isSelected: boolean;
+  isFavorite: boolean;
+  tier?: string;
+  onSelect: (c: Champion) => void;
+  onToggleFavorite: (id: string, e: React.MouseEvent) => void;
+}) {
+  return (
+    <button
+      onClick={() => onSelect(champion)}
+      className={`champ-item flex flex-col items-center gap-1 p-1.5 rounded-md ${isSelected ? 'selected' : ''}`}
+      style={{
+        background: isSelected ? 'rgba(79,70,229,0.12)' : 'transparent',
+        border: `1px solid ${isSelected ? 'var(--purple)' : 'transparent'}`,
+      }}
+      title={champion.nameJa}
+    >
+      <div className="relative">
+        <ChampionIcon championId={champion.id} patch={patch} size={42} />
+        {/* ティアバッジ */}
+        {tier && (
+          <span
+            className="absolute -bottom-1 -right-1 text-center font-bold rounded"
+            style={{ fontSize: '0.55rem', padding: '1px 3px', background: '#0A0E1A', color: 'var(--gold)', border: '1px solid rgba(200,155,60,0.4)', lineHeight: 1.4 }}
+          >
+            {tier}
+          </span>
+        )}
+        {/* お気に入りボタン */}
+        <button
+          onClick={(e) => onToggleFavorite(champion.id, e)}
+          className="btn-fav absolute -top-1 -left-1 flex items-center justify-center rounded-full"
+          style={{ width: 18, height: 18, background: isFavorite ? 'rgba(200,155,60,0.9)' : 'rgba(0,0,0,0.7)', border: `1px solid ${isFavorite ? 'var(--gold)' : 'rgba(255,255,255,0.15)'}`, fontSize: '0.6rem', lineHeight: 1 }}
+          title={isFavorite ? 'お気に入り解除' : 'お気に入り追加'}
+        >
+          {isFavorite ? '★' : '☆'}
+        </button>
+      </div>
+      <span
+        className="text-center leading-tight w-full overflow-hidden"
+        style={{ fontSize: '0.6rem', color: '#9CA3AF', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}
+      >
+        {champion.nameJa}
+      </span>
+    </button>
   );
 }
