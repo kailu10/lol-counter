@@ -4,7 +4,6 @@ import { useRouter } from 'next/navigation';
 import type { Champion, Role } from '@/types';
 
 const ROLES: Role[] = ['TOP', 'JG', 'MID', 'ADC', 'SUP'];
-const TIER_ORDER: Record<string, number> = { 'S+': 0, 'S': 1, 'A+': 2, 'A': 3, 'B+': 4, 'B': 5, 'C': 6, 'D': 7 };
 const FAV_KEY = 'lol-favorites';
 
 function normalizeId(id: string) {
@@ -37,7 +36,7 @@ export default function ChampionSearch({ initialChampionId, initialRole }: { ini
   const [selected, setSelected] = useState<Champion | null>(null);
   const [isSearching, setIsSearching] = useState(false);
   const [favorites, setFavorites] = useState<string[]>([]);
-  const [roleTiers, setRoleTiers] = useState<Record<string, string>>({});
+  const [roleTiers, setRoleTiers] = useState<Record<string, { tier?: string; pickRate: number }>>({});
 
   // 初期データ取得
   useEffect(() => {
@@ -67,7 +66,7 @@ export default function ChampionSearch({ initialChampionId, initialRole }: { ini
   useEffect(() => {
     fetch(`/api/tierlist?role=${role}`)
       .then((r) => r.json())
-      .then((data: Record<string, string>) => setRoleTiers(data))
+      .then((data: Record<string, { tier?: string; pickRate: number }>) => setRoleTiers(data))
       .catch(() => {});
   }, [role]);
 
@@ -96,11 +95,11 @@ export default function ChampionSearch({ initialChampionId, initialRole }: { ini
 
   const filteredByRole = role ? champions.filter((c) => c.roles.includes(role)) : champions;
 
-  // ティア順ソート（S+ → D → 未ランク）
+  // ピック率降順ソート（データなしは末尾）
   const sortedChampions = [...filteredByRole].sort((a, b) => {
-    const ta = TIER_ORDER[roleTiers[normalizeId(a.id)] ?? ''] ?? 99;
-    const tb = TIER_ORDER[roleTiers[normalizeId(b.id)] ?? ''] ?? 99;
-    if (ta !== tb) return ta - tb;
+    const pa = roleTiers[normalizeId(a.id)]?.pickRate ?? -1;
+    const pb = roleTiers[normalizeId(b.id)]?.pickRate ?? -1;
+    if (pa !== pb) return pb - pa;
     return a.nameJa.localeCompare(b.nameJa, 'ja');
   });
 
@@ -164,8 +163,8 @@ export default function ChampionSearch({ initialChampionId, initialRole }: { ini
                   >
                     <ChampionIcon championId={c.id} patch={patch} size={32} />
                     <span className="font-medium">{c.nameJa}</span>
-                    {roleTiers[normalizeId(c.id)] && (
-                      <span className="text-xs font-bold" style={{ color: 'var(--gold)' }}>{roleTiers[normalizeId(c.id)]}</span>
+                    {roleTiers[normalizeId(c.id)]?.tier && (
+                      <span className="text-xs font-bold" style={{ color: 'var(--gold)' }}>{roleTiers[normalizeId(c.id)].tier}</span>
                     )}
                     <span className="ml-auto text-xs" style={{ color: '#6B7280' }}>{c.nameEn}</span>
                   </button>
@@ -216,7 +215,7 @@ export default function ChampionSearch({ initialChampionId, initialRole }: { ini
           <span style={{ fontSize: '0.65rem' }}>{showList ? '▲' : '▼'}</span>
           <span>一覧から選ぶ</span>
           <span className="ml-auto text-xs" style={{ color: '#6B7280' }}>
-            ティア強さ順
+            ピック率順
           </span>
         </button>
 
@@ -236,7 +235,7 @@ export default function ChampionSearch({ initialChampionId, initialRole }: { ini
                       patch={patch}
                       isSelected={selected?.id === c.id}
                       isFavorite={true}
-                      tier={roleTiers[normalizeId(c.id)]}
+                      tier={roleTiers[normalizeId(c.id)]?.tier}
                       onSelect={handleSelect}
                       onToggleFavorite={toggleFavorite}
                     />
@@ -255,7 +254,7 @@ export default function ChampionSearch({ initialChampionId, initialRole }: { ini
                   patch={patch}
                   isSelected={selected?.id === c.id}
                   isFavorite={favorites.includes(c.id)}
-                  tier={roleTiers[normalizeId(c.id)]}
+                  tier={roleTiers[normalizeId(c.id)]?.tier}
                   onSelect={handleSelect}
                   onToggleFavorite={toggleFavorite}
                 />

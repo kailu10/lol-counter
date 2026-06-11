@@ -12,12 +12,15 @@ function difficultyStyle(d: string | null) {
 }
 
 const TIER_COLOR: Record<Tier, { bg: string; color: string }> = {
-  'S+': { bg: 'rgba(255,215,0,0.2)',   color: '#FFD700' },
-  'S':  { bg: 'rgba(255,165,0,0.2)',   color: '#FFA500' },
-  'A+': { bg: 'rgba(99,255,132,0.15)', color: '#63FF84' },
-  'A':  { bg: 'rgba(34,197,94,0.15)',  color: 'var(--green)' },
-  'B+': { bg: 'rgba(96,165,250,0.15)', color: '#60A5FA' },
-  'B':  { bg: 'rgba(59,130,246,0.15)', color: '#3B82F6' },
+  'S+': { bg: 'rgba(255,215,0,0.2)',    color: '#FFD700' },
+  'S':  { bg: 'rgba(255,165,0,0.2)',    color: '#FFA500' },
+  'S-': { bg: 'rgba(255,140,0,0.15)',   color: '#FF8C00' },
+  'A+': { bg: 'rgba(99,255,132,0.15)',  color: '#63FF84' },
+  'A':  { bg: 'rgba(34,197,94,0.15)',   color: 'var(--green)' },
+  'A-': { bg: 'rgba(16,185,129,0.15)',  color: '#0D9488' },
+  'B+': { bg: 'rgba(96,165,250,0.15)',  color: '#60A5FA' },
+  'B':  { bg: 'rgba(59,130,246,0.15)',  color: '#3B82F6' },
+  'B-': { bg: 'rgba(37,99,235,0.15)',   color: '#2563EB' },
   'C':  { bg: 'rgba(156,163,175,0.12)', color: '#9CA3AF' },
   'D':  { bg: 'rgba(107,114,128,0.12)', color: '#6B7280' },
 };
@@ -120,7 +123,7 @@ export default function CounterList({ result, patch }: { result: CounterResult; 
               )}
               {c.sampleCount && c.sampleCount > 0 && (
                 <span className="text-xs" style={{ color: '#6B7280' }}>
-                  n={formatSample(c.sampleCount)}
+                  {formatSample(c.sampleCount)}試合
                 </span>
               )}
               <span className="text-xs ml-auto" style={{ color: 'var(--gold)' }}>

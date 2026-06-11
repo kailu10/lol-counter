@@ -9,7 +9,7 @@ export interface Champion {
 
 export type Difficulty = '易しい' | '普通' | '難しい';
 
-export type Tier = 'S+' | 'S' | 'A+' | 'A' | 'B+' | 'B' | 'C' | 'D';
+export type Tier = 'S+' | 'S' | 'S-' | 'A+' | 'A' | 'A-' | 'B+' | 'B' | 'B-' | 'C' | 'D';
 
 export interface CounterEntry {
   championId: string;

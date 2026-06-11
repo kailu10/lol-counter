@@ -2,6 +2,7 @@ import type { CounterEntry, Difficulty, Tier } from '@/types';
 import type { OpggCounterEntry } from './scrapers/opgg';
 import type { LolalyticsCounterEntry } from './scrapers/lolalytics';
 import type { LolpsCounterEntry } from './scrapers/lolps';
+import type { TierEntry } from './scrapers/tierlist';
 
 function normalizeId(id: string): string {
   return id.toLowerCase().replace(/[^a-z0-9]/g, '');
@@ -12,7 +13,7 @@ export function aggregateCounters(
   lolalyticsResults: LolalyticsCounterEntry[],
   lolpsResults: LolpsCounterEntry[],
   jaNameMap: Map<string, string>,
-  tierMap: Map<string, Tier> = new Map()
+  tierMap: Map<string, TierEntry> = new Map()
 ): CounterEntry[] {
   const map = new Map<string, {
     winRateSum: number;
@@ -56,7 +57,7 @@ export function aggregateCounters(
     const nameJa = findJaName(originalId, jaNameMap);
     if (!nameJa) continue;
 
-    const tier = tierMap.get(normalizedId);
+    const tier = tierMap.get(normalizedId)?.tier;
 
     entries.push({
       championId: originalId,
