@@ -6,10 +6,6 @@ import type { Champion, Role } from '@/types';
 const ROLES: Role[] = ['TOP', 'JG', 'MID', 'ADC', 'SUP'];
 const FAV_KEY = 'lol-favorites';
 
-function normalizeId(id: string) {
-  return id.toLowerCase().replace(/[^a-z0-9]/g, '');
-}
-
 function ChampionIcon({ championId, patch, size = 44 }: { championId: string; patch: string; size?: number }) {
   const src = `https://ddragon.leagueoflegends.com/cdn/${patch}/img/champion/${championId}.png`;
   return (
@@ -36,7 +32,6 @@ export default function ChampionSearch({ initialChampionId, initialRole }: { ini
   const [selected, setSelected] = useState<Champion | null>(null);
   const [isSearching, setIsSearching] = useState(false);
   const [favorites, setFavorites] = useState<string[]>([]);
-  const [rolePickRates, setRolePickRates] = useState<Record<string, { pickRate: number }>>({});
 
   // 初期データ取得
   useEffect(() => {
@@ -61,14 +56,6 @@ export default function ChampionSearch({ initialChampionId, initialRole }: { ini
       if (saved) setFavorites(JSON.parse(saved));
     } catch {}
   }, []);
-
-  // ロール変更時にピック率データ取得（使用率順ソート用）
-  useEffect(() => {
-    fetch(`/api/tierlist?role=${role}`)
-      .then((r) => r.json())
-      .then((data: Record<string, { pickRate: number }>) => setRolePickRates(data))
-      .catch(() => {});
-  }, [role]);
 
   // 外クリックでサジェスト閉じる
   useEffect(() => {
@@ -95,13 +82,10 @@ export default function ChampionSearch({ initialChampionId, initialRole }: { ini
 
   const filteredByRole = role ? champions.filter((c) => c.roles.includes(role)) : champions;
 
-  // ピック率降順ソート（データなしは末尾）
-  const sortedChampions = [...filteredByRole].sort((a, b) => {
-    const pa = rolePickRates[normalizeId(a.id)]?.pickRate ?? -1;
-    const pb = rolePickRates[normalizeId(b.id)]?.pickRate ?? -1;
-    if (pa !== pb) return pb - pa;
-    return a.nameJa.localeCompare(b.nameJa, 'ja');
-  });
+  // 五十音順ソート
+  const sortedChampions = [...filteredByRole].sort((a, b) =>
+    a.nameJa.localeCompare(b.nameJa, 'ja')
+  );
 
   const favoriteChampions = sortedChampions.filter((c) => favorites.includes(c.id));
 
@@ -212,7 +196,7 @@ export default function ChampionSearch({ initialChampionId, initialRole }: { ini
           <span style={{ fontSize: '0.65rem' }}>{showList ? '▲' : '▼'}</span>
           <span>一覧から選ぶ</span>
           <span className="ml-auto text-xs" style={{ color: '#6B7280' }}>
-            ピック率順
+            五十音順
           </span>
         </button>
 
