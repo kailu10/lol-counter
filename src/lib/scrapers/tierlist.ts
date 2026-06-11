@@ -1,4 +1,4 @@
-import type { Role, Tier } from '@/types';
+import type { Role } from '@/types';
 
 const ROLE_PARAM: Record<Role, string> = {
   TOP: 'top',
@@ -8,24 +8,18 @@ const ROLE_PARAM: Record<Role, string> = {
   SUP: 'support',
 };
 
-const VALID_TIERS = new Set<string>(['S+', 'S', 'S-', 'A+', 'A', 'A-', 'B+', 'B', 'B-', 'C', 'D']);
-
 function normalizeId(id: string): string {
   return id.toLowerCase().replace(/[^a-z0-9]/g, '');
 }
 
-export interface TierEntry {
-  tier?: Tier;
+export interface PickRateEntry {
   pickRate: number;
 }
 
-// Qwikテンプレートは7要素グループ:
-// [0]=表示名, [1]=サブタイトル, [2]=表示名(重複), [3]=ティア, [4]="", [5]=変化, [6]=""
-const HEADER_ITEMS = 9;
-const GROUP_SIZE = 7;
-const TIER_OFFSET = 3;
-
-export async function scrapeTierList(role: Role): Promise<Map<string, TierEntry>> {
+// lolalytics のティアリストページから各チャンピオンのピック率を抽出（一覧の使用率順ソート用）。
+// 注: lolalytics のティア文字はクライアント側で算出されるためサーバーからは取得不可。
+// ピック率も SSR されるのは上位の一部のみで、レーンフィルタはクライアント適用。完全な値ではない点に留意。
+export async function scrapePickRates(role: Role): Promise<Map<string, PickRateEntry>> {
   const url = `https://lolalytics.com/lol/tierlist/?lane=${ROLE_PARAM[role]}&tier=emerald_plus`;
 
   try {
@@ -39,40 +33,14 @@ export async function scrapeTierList(role: Role): Promise<Map<string, TierEntry>
 
     const html = await res.text();
 
-    // ティアをQwikテンプレートから抽出
-    const values = [...html.matchAll(/<!--t=\w+-->(.*?)<!---->/gs)].map((m) => m[1].trim());
-    const tierByName = new Map<string, Tier>();
-    for (let i = HEADER_ITEMS; i + TIER_OFFSET < values.length; i += GROUP_SIZE) {
-      const name = values[i];
-      const tier = values[i + TIER_OFFSET];
-      if (name && VALID_TIERS.has(tier)) {
-        tierByName.set(normalizeId(name), tier as Tier);
-      }
-    }
-
-    // ピック率をビルドURLと隣接する width:48px プレーンテキストdivから抽出
     // 構造: href="/lol/{id}/build/" ... winRateSpan ... <div width:48px>{pickRate}</div>
-    const pickRateByChamp = new Map<string, number>();
+    const result = new Map<string, PickRateEntry>();
     const pickPattern =
       /href="\/lol\/([\w]+)\/build\/"(?:(?!href="\/lol\/).)*?<div style="width:48px"[^>]*>\s*([\d.]+)\s*<\/div>/gs;
     for (const m of html.matchAll(pickPattern)) {
-      const champId = m[1];
+      const normId = normalizeId(m[1]);
       const pickRate = parseFloat(m[2]);
-      if (!isNaN(pickRate) && !pickRateByChamp.has(champId)) {
-        pickRateByChamp.set(champId, pickRate);
-      }
-    }
-
-    // 両データを統合
-    const result = new Map<string, TierEntry>();
-    for (const [normId, tier] of tierByName.entries()) {
-      const pickRate = pickRateByChamp.get(normId) ?? 0;
-      result.set(normId, { tier, pickRate });
-    }
-    // ティアなしでもピック率があるチャンピオンを追加
-    for (const [champId, pickRate] of pickRateByChamp.entries()) {
-      const normId = normalizeId(champId);
-      if (!result.has(normId)) {
+      if (!isNaN(pickRate) && !result.has(normId)) {
         result.set(normId, { pickRate });
       }
     }

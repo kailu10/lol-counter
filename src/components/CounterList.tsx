@@ -1,20 +1,6 @@
 'use client';
 import { useState, useCallback } from 'react';
-import type { CounterResult, Tier } from '@/types';
-
-const TIER_COLOR: Record<Tier, { bg: string; color: string }> = {
-  'S+': { bg: 'rgba(255,215,0,0.2)',    color: '#FFD700' },
-  'S':  { bg: 'rgba(255,165,0,0.2)',    color: '#FFA500' },
-  'S-': { bg: 'rgba(255,140,0,0.15)',   color: '#FF8C00' },
-  'A+': { bg: 'rgba(99,255,132,0.15)',  color: '#63FF84' },
-  'A':  { bg: 'rgba(34,197,94,0.15)',   color: 'var(--green)' },
-  'A-': { bg: 'rgba(16,185,129,0.15)',  color: '#0D9488' },
-  'B+': { bg: 'rgba(96,165,250,0.15)',  color: '#60A5FA' },
-  'B':  { bg: 'rgba(59,130,246,0.15)',  color: '#3B82F6' },
-  'B-': { bg: 'rgba(37,99,235,0.15)',   color: '#2563EB' },
-  'C':  { bg: 'rgba(156,163,175,0.12)', color: '#9CA3AF' },
-  'D':  { bg: 'rgba(107,114,128,0.12)', color: '#6B7280' },
-};
+import type { CounterResult } from '@/types';
 
 function patchNotesUrl(_patch: string): string {
   return 'https://www.leagueoflegends.com/ja-jp/news/tags/patch-notes/';
@@ -118,15 +104,6 @@ export default function CounterList({ result, patch }: { result: CounterResult; 
                   </div>
 
                   <span className="text-sm font-semibold flex-1 truncate">{c.nameJa}</span>
-
-                  {c.tier && (
-                    <span
-                      className="text-xs font-bold px-1.5 py-0.5 rounded shrink-0"
-                      style={{ ...TIER_COLOR[c.tier], fontSize: '0.7rem' }}
-                    >
-                      {c.tier}
-                    </span>
-                  )}
 
                   <span className="text-sm font-bold tabular-nums shrink-0" style={{ color: 'var(--green)' }}>
                     {c.winRate.toFixed(1)}%

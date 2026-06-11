@@ -7,14 +7,11 @@ export interface Champion {
   roles: Role[];
 }
 
-export type Tier = 'S+' | 'S' | 'S-' | 'A+' | 'A' | 'A-' | 'B+' | 'B' | 'B-' | 'C' | 'D';
-
 export interface CounterEntry {
   championId: string;
   nameJa: string;
   winRate: number;
   sampleCount?: number;
-  tier?: Tier;
 }
 
 export interface CounterResult {

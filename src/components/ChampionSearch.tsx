@@ -36,7 +36,7 @@ export default function ChampionSearch({ initialChampionId, initialRole }: { ini
   const [selected, setSelected] = useState<Champion | null>(null);
   const [isSearching, setIsSearching] = useState(false);
   const [favorites, setFavorites] = useState<string[]>([]);
-  const [roleTiers, setRoleTiers] = useState<Record<string, { tier?: string; pickRate: number }>>({});
+  const [rolePickRates, setRolePickRates] = useState<Record<string, { pickRate: number }>>({});
 
   // 初期データ取得
   useEffect(() => {
@@ -62,11 +62,11 @@ export default function ChampionSearch({ initialChampionId, initialRole }: { ini
     } catch {}
   }, []);
 
-  // ロール変更時にティアデータ取得（使用率順ソート用）
+  // ロール変更時にピック率データ取得（使用率順ソート用）
   useEffect(() => {
     fetch(`/api/tierlist?role=${role}`)
       .then((r) => r.json())
-      .then((data: Record<string, { tier?: string; pickRate: number }>) => setRoleTiers(data))
+      .then((data: Record<string, { pickRate: number }>) => setRolePickRates(data))
       .catch(() => {});
   }, [role]);
 
@@ -97,8 +97,8 @@ export default function ChampionSearch({ initialChampionId, initialRole }: { ini
 
   // ピック率降順ソート（データなしは末尾）
   const sortedChampions = [...filteredByRole].sort((a, b) => {
-    const pa = roleTiers[normalizeId(a.id)]?.pickRate ?? -1;
-    const pb = roleTiers[normalizeId(b.id)]?.pickRate ?? -1;
+    const pa = rolePickRates[normalizeId(a.id)]?.pickRate ?? -1;
+    const pb = rolePickRates[normalizeId(b.id)]?.pickRate ?? -1;
     if (pa !== pb) return pb - pa;
     return a.nameJa.localeCompare(b.nameJa, 'ja');
   });
@@ -163,9 +163,6 @@ export default function ChampionSearch({ initialChampionId, initialRole }: { ini
                   >
                     <ChampionIcon championId={c.id} patch={patch} size={32} />
                     <span className="font-medium">{c.nameJa}</span>
-                    {roleTiers[normalizeId(c.id)]?.tier && (
-                      <span className="text-xs font-bold" style={{ color: 'var(--gold)' }}>{roleTiers[normalizeId(c.id)].tier}</span>
-                    )}
                     <span className="ml-auto text-xs" style={{ color: '#6B7280' }}>{c.nameEn}</span>
                   </button>
                 ))}
@@ -235,7 +232,6 @@ export default function ChampionSearch({ initialChampionId, initialRole }: { ini
                       patch={patch}
                       isSelected={selected?.id === c.id}
                       isFavorite={true}
-                      tier={roleTiers[normalizeId(c.id)]?.tier}
                       onSelect={handleSelect}
                       onToggleFavorite={toggleFavorite}
                     />
@@ -254,7 +250,6 @@ export default function ChampionSearch({ initialChampionId, initialRole }: { ini
                   patch={patch}
                   isSelected={selected?.id === c.id}
                   isFavorite={favorites.includes(c.id)}
-                  tier={roleTiers[normalizeId(c.id)]?.tier}
                   onSelect={handleSelect}
                   onToggleFavorite={toggleFavorite}
                 />
@@ -268,13 +263,12 @@ export default function ChampionSearch({ initialChampionId, initialRole }: { ini
 }
 
 function ChampionGridItem({
-  champion, patch, isSelected, isFavorite, tier, onSelect, onToggleFavorite,
+  champion, patch, isSelected, isFavorite, onSelect, onToggleFavorite,
 }: {
   champion: Champion;
   patch: string;
   isSelected: boolean;
   isFavorite: boolean;
-  tier?: string;
   onSelect: (c: Champion) => void;
   onToggleFavorite: (id: string, e: React.MouseEvent) => void;
 }) {
@@ -290,15 +284,6 @@ function ChampionGridItem({
     >
       <div className="relative">
         <ChampionIcon championId={champion.id} patch={patch} size={42} />
-        {/* ティアバッジ */}
-        {tier && (
-          <span
-            className="absolute -bottom-1 -right-1 text-center font-bold rounded"
-            style={{ fontSize: '0.55rem', padding: '1px 3px', background: '#0A0E1A', color: 'var(--gold)', border: '1px solid rgba(200,155,60,0.4)', lineHeight: 1.4 }}
-          >
-            {tier}
-          </span>
-        )}
         {/* お気に入りボタン */}
         <button
           onClick={(e) => onToggleFavorite(champion.id, e)}

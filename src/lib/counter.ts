@@ -1,8 +1,7 @@
 import { scrapeLolalytics } from './scrapers/lolalytics';
-import { scrapeTierList } from './scrapers/tierlist';
 import { cacheKey, getCached, setCached } from './cache';
 import { getAllChampions, getLatestPatch } from './ddragon';
-import type { Role, CounterResult, CounterEntry, Tier, Champion } from '@/types';
+import type { Role, CounterResult, CounterEntry, Champion } from '@/types';
 
 function normalizeId(id: string): string {
   return id.toLowerCase().replace(/[^a-z0-9]/g, '');
@@ -27,30 +26,20 @@ export async function getCounterData(
   const champByNorm = new Map<string, Champion>();
   for (const c of champions) champByNorm.set(normalizeId(c.id), c);
 
-  // データソースは lolalytics に一本化（カウンター勝率・試合数・ティア）
-  const [lolalyticsData, tierData] = await Promise.allSettled([
-    scrapeLolalytics(championId, role),
-    scrapeTierList(role),
-  ]);
-
-  const lolalytics = lolalyticsData.status === 'fulfilled' ? lolalyticsData.value : [];
-  const tierMap = tierData.status === 'fulfilled' ? tierData.value : new Map();
-
+  // データソースは lolalytics に一本化（カウンター勝率・試合数）
+  const lolalytics = await scrapeLolalytics(championId, role);
   if (lolalytics.length === 0) return null;
 
   const counters: CounterEntry[] = [];
   for (const e of lolalytics) {
-    const norm = normalizeId(e.championId);
-    const champ = champByNorm.get(norm);
+    const champ = champByNorm.get(normalizeId(e.championId));
     if (!champ) continue; // ddragon に存在しないキャラはスキップ
 
-    const tier = tierMap.get(norm)?.tier as Tier | undefined;
     counters.push({
-      championId: champ.id, // 正準な ddragon ID に統一（アイコン・ティア照合の一貫性）
+      championId: champ.id, // 正準な ddragon ID に統一（アイコン照合の一貫性）
       nameJa: champ.nameJa,
       winRate: e.winRate,
       sampleCount: e.sampleCount && e.sampleCount > 0 ? e.sampleCount : undefined,
-      tier,
     });
   }
 
